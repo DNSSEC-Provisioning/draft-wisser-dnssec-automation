@@ -4,8 +4,9 @@
 
 Domain Name System Operations (dnsop)                          U. Wisser
 Internet-Draft                           The Swedish Internet Foundation
-Intended status: Standards Track                        10 December 2020
-Expires: 13 June 2021
+Intended status: Standards Track                                S. Huque
+Expires: 23 August 2021                                       Salesforce
+                                                        19 February 2021
 
 
                            DNSSEC automation
@@ -14,8 +15,10 @@ Expires: 13 June 2021
 Abstract
 
    This document describes an algorithm and a protocol to automate
-   DNSSEC multi-signer [RFC8901] setup, operations and decomissioning.
-   it makes use of [RFC8078] and [RFC7477] to accomplish this.
+   DNSSEC multi-signer [RFC8901] "Multi-Signer DNSSEC Models" setup,
+   operations and decomissioning.  It makes use of [RFC8078] "Managing
+   DS Records from the Parent via CDS/CDNSKEY" and [RFC7477] "Child-to-
+   Parent Synchronization in DNS" to accomplish this.
 
 Status of This Memo
 
@@ -32,11 +35,11 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 13 June 2021.
+   This Internet-Draft will expire on 23 August 2021.
 
 Copyright Notice
 
-   Copyright (c) 2020 IETF Trust and the persons identified as the
+   Copyright (c) 2021 IETF Trust and the persons identified as the
    document authors.  All rights reserved.
 
    This document is subject to BCP 78 and the IETF Trust's Legal
@@ -50,31 +53,28 @@ Copyright Notice
 
 
 
-
-
-
-Wisser                    Expires 13 June 2021                  [Page 1]
+Wisser & Huque           Expires 23 August 2021                 [Page 1]
 
-Internet-Draft              DNSSEC automation              December 2020
+Internet-Draft              DNSSEC automation              February 2021
 
 
 Table of Contents
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
      1.1.  Out-Of-Scope  . . . . . . . . . . . . . . . . . . . . . .   2
-     1.2.  Notation  . . . . . . . . . . . . . . . . . . . . . . . .   3
+     1.2.  Notation  . . . . . . . . . . . . . . . . . . . . . . . .   2
      1.3.  Requirements Language . . . . . . . . . . . . . . . . . .   3
    2.  Use Cases . . . . . . . . . . . . . . . . . . . . . . . . . .   3
      2.1.  Running a multi-signer setup  . . . . . . . . . . . . . .   3
      2.2.  Secure change of name server operator . . . . . . . . . .   3
    3.  Algorithm . . . . . . . . . . . . . . . . . . . . . . . . . .   3
      3.1.  Setting up a new multi-signer group . . . . . . . . . . .   3
-     3.2.  Configuration . . . . . . . . . . . . . . . . . . . . . .   4
+     3.2.  Configuration . . . . . . . . . . . . . . . . . . . . . .   3
      3.3.  A new signer joins the multi-signer group . . . . . . . .   4
        3.3.1.  Prerequisites . . . . . . . . . . . . . . . . . . . .   4
        3.3.2.  Steps for joining . . . . . . . . . . . . . . . . . .   4
      3.4.  A signer leaves the multi-signer group  . . . . . . . . .   5
-   4.  Automation  . . . . . . . . . . . . . . . . . . . . . . . . .   6
+   4.  Automation  . . . . . . . . . . . . . . . . . . . . . . . . .   5
      4.1.  Centralized . . . . . . . . . . . . . . . . . . . . . . .   6
      4.2.  Decentralized . . . . . . . . . . . . . . . . . . . . . .   6
    5.  Acknowledgements  . . . . . . . . . . . . . . . . . . . . . .   6
@@ -82,9 +82,7 @@ Table of Contents
    7.  Security Considerations . . . . . . . . . . . . . . . . . . .   6
    8.  Normative References  . . . . . . . . . . . . . . . . . . . .   6
    9.  Informative References  . . . . . . . . . . . . . . . . . . .   6
-   Appendix A.  Change History . . . . . . . . . . . . . . . . . . .   7
-     A.1.  Change from 00 to 01  . . . . . . . . . . . . . . . . . .   7
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .   7
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .   6
 
 1.  Introduction
 
@@ -103,22 +101,18 @@ Table of Contents
    all instances the contents of the zone have to be synchronized.  The
    content synchronization is out-of-scope for this document.
 
-
-
-
-
-
-
-Wisser                    Expires 13 June 2021                  [Page 2]
-
-Internet-Draft              DNSSEC automation              December 2020
-
-
 1.2.  Notation
 
    Short definitions of expressions used in this document
 
    signer  An entity signing a zone
+
+
+
+Wisser & Huque           Expires 23 August 2021                 [Page 2]
+
+Internet-Draft              DNSSEC automation              February 2021
+
 
    multi-signer group  A group of signers that sign the same zone
 
@@ -163,18 +157,18 @@ Internet-Draft              DNSSEC automation              December 2020
    This would be a special case, a multi-signer group with only one
    signer.
 
-
-
-Wisser                    Expires 13 June 2021                  [Page 3]
-
-Internet-Draft              DNSSEC automation              December 2020
-
-
 3.2.  Configuration
 
    The following configrations have to be made for any signer of the
    multi-signer group before joining the group.  These steps are not
    automated by this draft.
+
+
+
+Wisser & Huque           Expires 23 August 2021                 [Page 3]
+
+Internet-Draft              DNSSEC automation              February 2021
+
 
    1.  The signers own keys (probably the keys the signer has the
        private part of)
@@ -218,20 +212,19 @@ Internet-Draft              DNSSEC automation              December 2020
    9.   Exchange of NS set, after this step all signers must have the ns
         set of all other signers
 
-
-
-
-Wisser                    Expires 13 June 2021                  [Page 4]
-
-Internet-Draft              DNSSEC automation              December 2020
-
-
    10.  Compile new complete NS set with NS records from all signers
 
    11.  Compare to NS set at parent
 
    12.  If parent if different, publish CSYNC record with NS and A and
         AAAA bit set.
+
+
+
+Wisser & Huque           Expires 23 August 2021                 [Page 4]
+
+Internet-Draft              DNSSEC automation              February 2021
+
 
    13.  Wait for parent to pick up changes
 
@@ -275,23 +268,24 @@ Internet-Draft              DNSSEC automation              December 2020
 
    16.  Remove CDS/CDNSKEY set from all signers
 
-
-
-Wisser                    Expires 13 June 2021                  [Page 5]
-
-Internet-Draft              DNSSEC automation              December 2020
-
-
 4.  Automation
 
    Automation of the neccessary steps described in the last section can
    be devided into two main models, centralized and decentralized.  Both
    have pros and cons and any zone operator should chose wisely.
 
+
+
+
+Wisser & Huque           Expires 23 August 2021                 [Page 5]
+
+Internet-Draft              DNSSEC automation              February 2021
+
+
 4.1.  Centralized
 
-   In a centralized model the zone operator will run a software executes
-   all steps neccessary and controls all signers.
+   In a centralized model the zone operator will run a software that
+   executes all steps neccessary and controls all signers.
 
 4.2.  Decentralized
 
@@ -329,22 +323,20 @@ Internet-Draft              DNSSEC automation              December 2020
               DOI 10.17487/RFC8901, September 2020,
               <https://www.rfc-editor.org/info/rfc8901>.
 
+Authors' Addresses
 
 
 
 
-Wisser                    Expires 13 June 2021                  [Page 6]
+
+
+
+
+
+Wisser & Huque           Expires 23 August 2021                 [Page 6]
 
-Internet-Draft              DNSSEC automation              December 2020
+Internet-Draft              DNSSEC automation              February 2021
 
-
-Appendix A.  Change History
-
-A.1.  Change from 00 to 01
-
-   1.  Nothing yet
-
-Author's Address
 
    Ulrich Wisser
    The Swedish Internet Foundation
@@ -356,6 +348,13 @@ Author's Address
    URI:   https://www.internetstiftelsen.se
 
 
+   Shumon Huque
+   Salesforce
+   415 Mission Street, 3rd Floor
+   San Francisco,  CA 94105
+   United States of America
+
+   Email: shuque@gmail.com
 
 
 
@@ -389,4 +388,5 @@ Author's Address
 
 
 
-Wisser                    Expires 13 June 2021                  [Page 7]
+
+Wisser & Huque           Expires 23 August 2021                 [Page 7]
