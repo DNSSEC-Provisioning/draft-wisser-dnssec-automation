@@ -5,20 +5,22 @@
 Domain Name System Operations (dnsop)                          U. Wisser
 Internet-Draft                           The Swedish Internet Foundation
 Intended status: Standards Track                                S. Huque
-Expires: 23 August 2021                                       Salesforce
-                                                        19 February 2021
+Expires: 25 August 2021                                       Salesforce
+                                                        21 February 2021
 
 
                            DNSSEC automation
-                 draft-wisser-dnssec-automation-latest
+                   draft-wisser-dnssec-automation-01
 
 Abstract
 
    This document describes an algorithm and a protocol to automate
    DNSSEC multi-signer [RFC8901] "Multi-Signer DNSSEC Models" setup,
-   operations and decomissioning.  It makes use of [RFC8078] "Managing
-   DS Records from the Parent via CDS/CDNSKEY" and [RFC7477] "Child-to-
-   Parent Synchronization in DNS" to accomplish this.
+   operations and decomissioning.  It primarily deals with Model 2 of
+   the Multi-Signer specification, where each operator has their own
+   distinct KSK and ZSK sets (or CSK sets).  It makes use of [RFC8078]
+   "Managing DS Records from the Parent via CDS/CDNSKEY" and [RFC7477]
+   "Child-to-Parent Synchronization in DNS" to accomplish this.
 
 Status of This Memo
 
@@ -35,12 +37,26 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 23 August 2021.
+   This Internet-Draft will expire on 25 August 2021.
 
 Copyright Notice
 
    Copyright (c) 2021 IETF Trust and the persons identified as the
    document authors.  All rights reserved.
+
+
+
+
+
+
+
+
+
+
+Wisser & Huque           Expires 25 August 2021                 [Page 1]
+
+Internet-Draft              DNSSEC automation              February 2021
+
 
    This document is subject to BCP 78 and the IETF Trust's Legal
    Provisions Relating to IETF Documents (https://trustee.ietf.org/
@@ -51,42 +67,35 @@ Copyright Notice
    as described in Section 4.e of the Trust Legal Provisions and are
    provided without warranty as described in the Simplified BSD License.
 
-
-
-Wisser & Huque           Expires 23 August 2021                 [Page 1]
-
-Internet-Draft              DNSSEC automation              February 2021
-
-
 Table of Contents
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
-     1.1.  Out-Of-Scope  . . . . . . . . . . . . . . . . . . . . . .   2
-     1.2.  Notation  . . . . . . . . . . . . . . . . . . . . . . . .   2
+     1.1.  Out-Of-Scope  . . . . . . . . . . . . . . . . . . . . . .   3
+     1.2.  Notation  . . . . . . . . . . . . . . . . . . . . . . . .   3
      1.3.  Requirements Language . . . . . . . . . . . . . . . . . .   3
    2.  Use Cases . . . . . . . . . . . . . . . . . . . . . . . . . .   3
      2.1.  Running a multi-signer setup  . . . . . . . . . . . . . .   3
      2.2.  Secure change of name server operator . . . . . . . . . .   3
    3.  Algorithm . . . . . . . . . . . . . . . . . . . . . . . . . .   3
-     3.1.  Setting up a new multi-signer group . . . . . . . . . . .   3
-     3.2.  Configuration . . . . . . . . . . . . . . . . . . . . . .   3
+     3.1.  Setting up a new multi-signer group . . . . . . . . . . .   4
+     3.2.  Configuration . . . . . . . . . . . . . . . . . . . . . .   4
      3.3.  A new signer joins the multi-signer group . . . . . . . .   4
        3.3.1.  Prerequisites . . . . . . . . . . . . . . . . . . . .   4
        3.3.2.  Steps for joining . . . . . . . . . . . . . . . . . .   4
      3.4.  A signer leaves the multi-signer group  . . . . . . . . .   5
-   4.  Automation  . . . . . . . . . . . . . . . . . . . . . . . . .   5
+   4.  Automation  . . . . . . . . . . . . . . . . . . . . . . . . .   6
      4.1.  Centralized . . . . . . . . . . . . . . . . . . . . . . .   6
      4.2.  Decentralized . . . . . . . . . . . . . . . . . . . . . .   6
    5.  Acknowledgements  . . . . . . . . . . . . . . . . . . . . . .   6
    6.  IANA Considerations . . . . . . . . . . . . . . . . . . . . .   6
    7.  Security Considerations . . . . . . . . . . . . . . . . . . .   6
    8.  Normative References  . . . . . . . . . . . . . . . . . . . .   6
-   9.  Informative References  . . . . . . . . . . . . . . . . . . .   6
-   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .   6
+   9.  Informative References  . . . . . . . . . . . . . . . . . . .   7
+   Authors' Addresses  . . . . . . . . . . . . . . . . . . . . . . .   7
 
 1.  Introduction
 
-   [RFC8901] describes the neccessary steps and API for a multi-signer
+   [RFC8901] describes the necessary steps and API for a multi-signer
    DNSSEC configuration.  In this document we will combine [RFC8901]
    with [RFC8078] and [RFC7477] to define a fully automatable algorithm
    for setting up, operating and decomissioning of a multi-signer DNSSEC
@@ -95,24 +104,29 @@ Table of Contents
    One of the special cases of multi-signer DNSSEC is actually the
    secure change of DNS operator.
 
+
+
+
+
+
+Wisser & Huque           Expires 25 August 2021                 [Page 2]
+
+Internet-Draft              DNSSEC automation              February 2021
+
+
 1.1.  Out-Of-Scope
 
-   In order for any multi-signer group to give consitent answers over
-   all instances the contents of the zone have to be synchronized.  The
-   content synchronization is out-of-scope for this document.
+   In order for any multi-signer group to give consistent answers across
+   all nameservers, the data contents of the zone also have to be
+   synchronized (in addition to infrastructure records like NS, DNSKEY,
+   CDS etc).  This content synchronization is out-of-scope for this
+   document.
 
 1.2.  Notation
 
    Short definitions of expressions used in this document
 
    signer  An entity signing a zone
-
-
-
-Wisser & Huque           Expires 23 August 2021                 [Page 2]
-
-Internet-Draft              DNSSEC automation              February 2021
-
 
    multi-signer group  A group of signers that sign the same zone
 
@@ -132,21 +146,29 @@ Internet-Draft              DNSSEC automation              February 2021
 
    In this document we describe how all of the steps in the multi-signer
    DNSSEC setup can be automated.  That is, all except the initial trust
-   between involded signers.
+   between involved signers.
 
 2.2.  Secure change of name server operator
 
    Changing the name server operator of a DNSSEC signed zone can be
-   quite a challenge.  Currently the most used algorithm is "going
-   insecure".  This is a bad choice for security.  And a bad choice for
-   users relying on the security of the zone.
+   quite a challenge.  Currently the most common method is temporarily
+   "going insecure".  This is a bad choice for security, and a bad
+   choice for users relying on the security of the zone.
 
-   Changing name server operators is a special case of multi-signer
-   DNSSEC operations.  It simply comes down to the new operator joins
-   the old operator in a multi-signer setup.  And once that is completed
-   the old operator leaves the multi-signer setup.
+   Changing name server operators can be considered to be a transient
+   special case of multi-signer DNSSEC operations.  A new operator joins
+   the old operator in a temporary multi-signer setup.  Once that is
+   completed, the old operator leaves the multi-signer setup.
 
 3.  Algorithm
+
+
+
+
+Wisser & Huque           Expires 25 August 2021                 [Page 3]
+
+Internet-Draft              DNSSEC automation              February 2021
+
 
 3.1.  Setting up a new multi-signer group
 
@@ -159,21 +181,14 @@ Internet-Draft              DNSSEC automation              February 2021
 
 3.2.  Configuration
 
-   The following configrations have to be made for any signer of the
+   The following configuration has to be made for any signer of the
    multi-signer group before joining the group.  These steps are not
    automated by this draft.
 
+   1.  The signers own keys (the keys the signer has the private part
+       of)
 
-
-Wisser & Huque           Expires 23 August 2021                 [Page 3]
-
-Internet-Draft              DNSSEC automation              February 2021
-
-
-   1.  The signers own keys (probably the keys the signer has the
-       private part of)
-
-   2.  The NS records in the zone that get update from the signer.
+   2.  The NS records in the zone
 
    3.  An established trust to the multi-signer group
 
@@ -186,14 +201,14 @@ Internet-Draft              DNSSEC automation              February 2021
    1.  has a working setup of the zone, including DNSSEC signing.
 
    2.  uses the same algorithm for DNSSEC signing as the multi-signer
-       goup uses.
+       group uses.
 
 3.3.2.  Steps for joining
 
    1.   a new signer joins the group
 
    2.   Exchange of keys, after this step all signers must have the
-        dnskey set of all other signers of the group
+        DNSKEY set of all other signers of the group
 
    3.   Calculate CDS/CDNSKEY set
 
@@ -204,27 +219,27 @@ Internet-Draft              DNSSEC automation              February 2021
 
    6.   Wait for parent to pick up DS updates
 
+
+
+Wisser & Huque           Expires 25 August 2021                 [Page 4]
+
+Internet-Draft              DNSSEC automation              February 2021
+
+
    7.   Remove CDS/CDNSKEY set from all signers
 
    8.   Wait 2 time maximum TTL of DS at parent and DNSKEY at all
         children
 
-   9.   Exchange of NS set, after this step all signers must have the ns
+   9.   Exchange of NS set, after this step all signers must have the NS
         set of all other signers
 
    10.  Compile new complete NS set with NS records from all signers
 
    11.  Compare to NS set at parent
 
-   12.  If parent if different, publish CSYNC record with NS and A and
+   12.  If parent is different, publish CSYNC record with NS and A and
         AAAA bit set.
-
-
-
-Wisser & Huque           Expires 23 August 2021                 [Page 4]
-
-Internet-Draft              DNSSEC automation              February 2021
-
 
    13.  Wait for parent to pick up changes
 
@@ -232,7 +247,7 @@ Internet-Draft              DNSSEC automation              February 2021
 
 3.4.  A signer leaves the multi-signer group
 
-   1.   Signal to all other signers to remove the leaving signes NS
+   1.   Signal to all other signers to remove the leaving signer's NS
         records
 
    2.   Compile new complete NS set with NS records from all signers
@@ -255,9 +270,17 @@ Internet-Draft              DNSSEC automation              February 2021
    10.  Remaining signers remove ZSK of leaving signer from their DNSKEY
         set
 
-   11.  Remaining signers recalculat DNSKEY set
+   11.  Remaining signers recalculate DNSKEY set
 
    12.  Calculate CDS/CDNSKEY set
+
+
+
+
+Wisser & Huque           Expires 25 August 2021                 [Page 5]
+
+Internet-Draft              DNSSEC automation              February 2021
+
 
    13.  All signers put the ZSK of all other signers in their DNSKEY
         set.
@@ -270,28 +293,20 @@ Internet-Draft              DNSSEC automation              February 2021
 
 4.  Automation
 
-   Automation of the neccessary steps described in the last section can
-   be devided into two main models, centralized and decentralized.  Both
+   Automation of the necessary steps described in the last section can
+   be divided into two main models, centralized and decentralized.  Both
    have pros and cons and any zone operator should chose wisely.
-
-
-
-
-Wisser & Huque           Expires 23 August 2021                 [Page 5]
-
-Internet-Draft              DNSSEC automation              February 2021
-
 
 4.1.  Centralized
 
-   In a centralized model the zone operator will run a software that
-   executes all steps neccessary and controls all signers.
+   In a centralized model the zone operator will run software that
+   executes all steps necessary and controls all signers.
 
 4.2.  Decentralized
 
-   In the decentralized models all signers will comminucate with each
+   In the decentralized models all signers will communicate with each
    other and execute the necessary steps on their instance only.  For
-   this signers need a specialised protocol to comminicate configuration
+   this signers need a specialized protocol to communicate configuration
    details that are not part of the zone data.
 
 5.  Acknowledgements
@@ -316,6 +331,13 @@ Internet-Draft              DNSSEC automation              February 2021
               DOI 10.17487/RFC8078, March 2017,
               <https://www.rfc-editor.org/info/rfc8078>.
 
+
+
+Wisser & Huque           Expires 25 August 2021                 [Page 6]
+
+Internet-Draft              DNSSEC automation              February 2021
+
+
 9.  Informative References
 
    [RFC8901]  Huque, S., Aras, P., Dickinson, J., Vcelak, J., and D.
@@ -324,19 +346,6 @@ Internet-Draft              DNSSEC automation              February 2021
               <https://www.rfc-editor.org/info/rfc8901>.
 
 Authors' Addresses
-
-
-
-
-
-
-
-
-
-Wisser & Huque           Expires 23 August 2021                 [Page 6]
-
-Internet-Draft              DNSSEC automation              February 2021
-
 
    Ulrich Wisser
    The Swedish Internet Foundation
@@ -380,13 +389,4 @@ Internet-Draft              DNSSEC automation              February 2021
 
 
 
-
-
-
-
-
-
-
-
-
-Wisser & Huque           Expires 23 August 2021                 [Page 7]
+Wisser & Huque           Expires 25 August 2021                 [Page 7]
