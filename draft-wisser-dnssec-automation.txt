@@ -10,7 +10,7 @@ Expires: 25 August 2021                                       Salesforce
 
 
                            DNSSEC automation
-                   draft-wisser-dnssec-automation-01
+                 draft-wisser-dnssec-automation-latest
 
 Abstract
 
